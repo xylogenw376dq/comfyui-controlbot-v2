@@ -1925,7 +1925,7 @@ class ControlBot:
         n_over = len(self.overrides.load().get("nodes") or {})
         self.api.send_message(
             chat_id,
-            self.t(chat_id, "nodes_title") + "\n" + "\n".join(lines)
+            self.t(chat_id, "nodes_title", name=self.get_chat_workflow(chat_id)) + "\n" + "\n".join(lines)
             + self.t(chat_id, "overrides_count", count=n_over),
         )
 
@@ -1962,6 +1962,7 @@ class ControlBot:
             self.t(
                 chat_id, "params_header",
                 node=node_id, cls=node.get("class_type"), title=node_title(node),
+                wf=self.get_chat_workflow(chat_id),
             )
         ]
         info = self.comfy.object_info(node.get("class_type", ""))
@@ -2008,7 +2009,7 @@ class ControlBot:
         candidates = None
         if "." in token:
             node_key, param = token.split(".", 1)
-            node_id, _ = resolve_target(self.load_workflow_safe(), node_key)
+            node_id, _ = resolve_target(self.load_workflow_safe(chat_id), node_key)
             candidates = [node_id] if node_id else [node_key]
             first = param
         else:
