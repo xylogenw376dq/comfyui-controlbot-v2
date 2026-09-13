@@ -1906,12 +1906,34 @@ class ControlBot:
                 return
             entry = None
             seg_t0 = time.time()
+            vanished_since = None
+            last_edit = time.time()
+            edit_every = max(3, int(self.config.get("progress_edit_interval", 5)))
             while time.time() - seg_t0 < 1500:
                 time.sleep(5)
                 h = self.comfy.get(f"/history/{prompt_id}", timeout=15)
                 if h and prompt_id in h:
                     entry = h[prompt_id]
                     break
+                queue = self.comfy.get("/queue", timeout=10) or {}
+                running = prompt_id in [q[1] for q in queue.get("queue_running", [])]
+                pending_ids = [q[1] for q in queue.get("queue_pending", [])]
+                if not running and not pending_ids:
+                    if vanished_since is None:
+                        vanished_since = time.time()
+                    elif time.time() - vanished_since > 15:
+                        self.api.edit_message(chat_id, status_msg_id, self.t(
+                            chat_id, "video_chain_failed", i=i, n=len(plan), reason="задача исчезла из очереди",
+                        ))
+                        return
+                else:
+                    vanished_since = None
+                if status_msg_id and time.time() - last_edit >= edit_every:
+                    self.api.edit_message(chat_id, status_msg_id, self.t(
+                        chat_id, "video_segment_progress",
+                        seconds=seconds, i=i, n=len(plan), elapsed=int(time.time() - t_start),
+                    ))
+                    last_edit = time.time()
             st = (entry or {}).get("status", {})
             if (st.get("status_str")) != "success":
                 self.api.send_message(chat_id, self.t(
