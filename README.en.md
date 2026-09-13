@@ -1,4 +1,4 @@
-# comfyui-controlbot v2
+# <img src="docs/img/icon.png" width="36" align="top" alt=""> comfyui-controlbot v2
 
 A Telegram bot that drives ComfyUI from your phone: image generation, workflow parameter
 tuning, LoRA, ControlNet — without opening the UI.

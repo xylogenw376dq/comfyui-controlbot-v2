@@ -1,4 +1,4 @@
-# comfyui-controlbot v2
+# <img src="docs/img/icon.png" width="36" align="top" alt=""> comfyui-controlbot v2
 
 Телеграм-бот, который управляет ComfyUI с телефона: генерация картинок, настройка параметров
 workflow, LoRA, ControlNet — без открытия интерфейса.

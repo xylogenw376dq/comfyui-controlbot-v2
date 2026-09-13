@@ -1,4 +1,4 @@
-# comfyui-controlbot v2
+# <img src="docs/img/icon.png" width="36" align="top" alt=""> comfyui-controlbot v2
 
 一个通过 Telegram 控制 ComfyUI 的机器人：在手机上完成图像生成、工作流参数调节、
 LoRA 和 ControlNet，无需打开界面。
