@@ -944,6 +944,17 @@ class ControlBot:
         return None
 
     @staticmethod
+    def video_fps(workflow):
+        """fps of the video workflow (CreateVideo node), default 24."""
+        for n in workflow.values():
+            if n.get("class_type") == "CreateVideo":
+                try:
+                    return int(n.get("inputs", {}).get("fps", 24))
+                except (TypeError, ValueError):
+                    return 24
+        return 24
+
+    @staticmethod
     def is_video_workflow(workflow):
         return any(
             "Video" in n.get("class_type", "")
@@ -1302,6 +1313,7 @@ class ControlBot:
         st = self.get_lora_settings(chat_id)
         alias = st.get("alias")
         if not alias:
+            print("DBG2 inject_lora: no alias")
             return workflow, None
         lora_file = self.lora_aliases().get(alias)
         if not lora_file:
@@ -1317,6 +1329,7 @@ class ControlBot:
         old_model = (workflow.get(sampler_id) or {}).get("inputs", {}).get("model") if sampler_id else None
         old_clip = (workflow.get(clip_id) or {}).get("inputs", {}).get("clip") if clip_id else None
         if not is_wire(old_model) or not is_wire(old_clip):
+            print("DBG3 inject_lora: wires fail", old_model, old_clip)
             return workflow, MsgError("lora_need_sampler")
         s = float(st.get("strength", 0.8))
         workflow["__lora"] = {
@@ -1408,11 +1421,12 @@ class ControlBot:
             self.api.send_message(chat_id, self.t(chat_id, "cnet_group_admin_only"))
             return
         st = self.get_video_settings(chat_id)
+        fps = self.video_fps(self.load_active_workflow(chat_id))
         if not arg.strip():
-            plan = plan_video_segments(int(st["seconds"]) * 24)
+            plan = plan_video_segments(int(st["seconds"]) * fps)
             self.api.send_message(chat_id, self.t(
                 chat_id, "vseconds_status",
-                seconds=st["seconds"], frames=int(st["seconds"]) * 24, segments=len(plan),
+                seconds=st["seconds"], fps=fps, frames=int(st["seconds"]) * fps, segments=len(plan),
             ))
             return
         try:
@@ -1424,9 +1438,10 @@ class ControlBot:
             self.api.send_message(chat_id, self.t(chat_id, "vseconds_range"))
             return
         self.set_video_settings(chat_id, seconds=value)
-        plan = plan_video_segments(value * 24)
+        fps = self.video_fps(self.load_active_workflow(chat_id))
+        plan = plan_video_segments(value * fps)
         self.api.send_message(chat_id, self.t(
-            chat_id, "vseconds_set", seconds=value, frames=value * 24, segments=len(plan),
+            chat_id, "vseconds_set", seconds=value, fps=fps, frames=value * fps, segments=len(plan),
         ))
 
     def handle_callback(self, cb):
@@ -1848,7 +1863,7 @@ class ControlBot:
             }
         })
 
-    def run_video_chain(self, chat_id, base_workflow, plan, first_image_name, seconds, prompt_text):
+    def run_video_chain(self, chat_id, base_workflow, plan, first_image_name, seconds, prompt_text, fps=24):
         """Generate a long video in <=81-frame segments, chaining via the last frame."""
         loader_id = next(
             (nid for nid, n in base_workflow.items() if n.get("class_type") == "LoadImage"), None
@@ -1931,7 +1946,7 @@ class ControlBot:
                     seconds=seconds, i=i + 1, n=len(plan), elapsed=int(time.time() - t_start),
                 ))
         self.api.edit_message(chat_id, status_msg_id, self.t(chat_id, "video_assembling"))
-        final = assemble_mp4(blobs, fps=24)
+        final = assemble_mp4(blobs, fps=fps)
         if not final:
             self.api.send_message(chat_id, self.t(chat_id, "video_chain_failed", i=0, n=len(plan), reason="assembly"))
             return
@@ -2102,7 +2117,8 @@ class ControlBot:
             # video workflow: split the duration into <=81-frame segments and chain them
         if self.is_video_workflow(workflow):
             vset = self.get_video_settings(chat_id)
-            plan = plan_video_segments(int(vset.get("seconds", 2)) * 24)
+            fps = self.video_fps(workflow)
+            plan = plan_video_segments(int(vset.get("seconds", 2)) * fps)
             latent_id = next(
                 (nid for nid, n in workflow.items() if n.get("class_type") == "Wan22ImageToVideoLatent"),
                 None,
@@ -2114,7 +2130,7 @@ class ControlBot:
             elif latent_id:
                 threading.Thread(
                     target=self.run_video_chain,
-                    args=(chat_id, workflow, plan, main_image_name, int(vset.get("seconds", 2)), text),
+                    args=(chat_id, workflow, plan, main_image_name, int(vset.get("seconds", 2)), text, fps),
                     daemon=True,
                 ).start()
                 return

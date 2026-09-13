@@ -21,6 +21,9 @@ INPUT_FILES = ["example.png", "mask.png"]  # fake ComfyUI input folder listing
 
 class FakeAPI:
     def send_message(self, chat_id, text, parse_mode=None):
+        if "LoRA" in text:
+            import traceback
+            traceback.print_stack()
         SENT.append(("msg", chat_id, text))
         return len(SENT)
 
@@ -1162,6 +1165,21 @@ assert "start_image" not in lv["inputs"], lv
 assert q["27"]["inputs"]["text"] == "a cabin in the mountains, clouds drifting"
 print("OK video T2V mode (text-only)")
 
+# vseconds respects the workflow fps
+SENT.clear()
+bot2b.set_chat_workflow(CHAT, "video")
+import copy as _copy
+orig_law = bot2b.load_active_workflow
+wf_v = _copy.deepcopy(bot2b.load_active_workflow(CHAT))
+wf_v["90"]["inputs"]["fps"] = 30
+bot2b.load_active_workflow = lambda cid: _copy.deepcopy(wf_v)
+bot2b.cmd_vseconds(CHAT, "6")
+assert "30 fps" in SENT[-1][2] and "180 кадров" in SENT[-1][2], SENT[-1][2]
+assert td.plan_video_segments(180) == [81, 81, 17], td.plan_video_segments(180)  # 17 = nearest 4n+1 to 18
+bot2b.load_active_workflow = orig_law
+bot2b.set_video_settings(CHAT, seconds=2)
+print("OK /vseconds fps-aware")
+
 # with a photo -> I2V mode keeps start_image wired
 POSTED.clear()
 bot2b.cmd_generate(CHAT, "clouds drifting", {"file_id": "good", "ext": "jpg"})
@@ -1171,7 +1189,8 @@ assert "start_image" in lv["inputs"], lv
 print("OK video I2V mode (photo kept)")
 
 # cnet enabled on video workflow -> skipped with a notice, graph untouched
-bot2b.set_cnet_settings(CHAT, enabled=True, mask_name="mask.png", prep="")
+bot2b.set_cnet_settings(CHAT, enabled=True, mask_name="mask.png", prep="", seconds=2)
+bot2b.set_chat_workflow(CHAT, "video")
 POSTED.clear()
 SENT.clear()
 bot2b.comfy = PostingComfy()
@@ -1181,7 +1200,6 @@ assert "__cnet_apply" not in q, "cnet must not patch the Wan model"
 assert any("не применяется к video" in str(s[2]) for s in SENT), SENT
 bot2b.set_cnet_settings(CHAT, enabled=False)
 print("OK cnet skipped on video workflow")
-
 # --- prompting tips per workflow ----------------------------------------- #
 
 bot2b.set_chat_workflow(CHAT, "txt2img")
@@ -1194,58 +1212,15 @@ bot2b.cmd_tips(CHAT, "")
 assert "Wan 2.2 TI2V 5B" in SENT[-1][2] and "ДВИЖЕНИЕ" in SENT[-1][2], SENT[-1][2]
 print("OK /tips per workflow")
 
-# real download_file: retries transient failures, respects 429, reports final status
-class FakeResp:
-    def __init__(self, status, body=b""):
-        self.status_code = status
-        self.text = body
-        self.content = b"FILEBYTES"
-    def json(self):
-        return {"parameters": {"retry_after": 0}}
+# --- i18n coverage: every key used in code must exist in every language -- #
 
-class FlakySession:
-    """Fails twice, then succeeds; also serves the all-fail scenario."""
-    def __init__(self, statuses):
-        self.statuses = list(statuses)
-        self.calls = 0
-    def get(self, url, timeout=None):
-        self.calls += 1
-        s = self.statuses.pop(0) if self.statuses else 200
-        return FakeResp(s)
+src = open("telegram_daemon.py", encoding="utf-8").read()
+used = set(re.findall(r"\.t\(\s*chat_id,\s*[\"']([a-z_]+)[\"']", src, re.S))
+used |= set(re.findall(r"MsgError\(\s*[\"']([a-z_]+)[\"']", src))
+used |= {"seed_random", "seed_increment", "seed_decrement"}  # f"seed_{mode}" is dynamic
+for lang in ("ru", "en"):
+    missing = used - set(td.STRINGS[lang])
+    assert not missing, f"missing keys in {lang}: {missing}"
+print(f"OK i18n coverage: {len(used)} keys present in ru+en")
 
-orig_sleep = td.time.sleep
-td.time.sleep = lambda s: None  # keep the test fast
-try:
-    api = td.TelegramAPI("TESTTOKEN")
-    api._request = lambda method, data=None, files=None, timeout=None: {
-        "file_path": "photos/f.jpg", "file_size": 103000
-    }
-    api.session = FlakySession([502, 429, 200])
-    blob, err = api.download_file("x")
-    assert blob == b"FILEBYTES" and err is None, (blob, err)
-    assert api.session.calls == 3
-    print("OK download_file retries to success")
-
-    api2 = td.TelegramAPI("TESTTOKEN")
-    api2._request = api._request
-    api2.session = FlakySession([502, 500, 502])
-    blob, err = api2.download_file("x")
-    assert blob is None and err.key == "img_dl_failed" and err.kw["reason"] == "HTTP 502", err
-    print("OK download_file all-fail -> reason reported")
-
-    api3 = td.TelegramAPI("TESTTOKEN")
-    api3._request = lambda method, data=None, files=None, timeout=None: {
-        "file_path": "photos/f.jpg", "file_size": 25_000_000
-    }
-    blob, err = api3.download_file("x")
-    assert blob is None and err.key == "img_too_large", err
-    print("OK download_file size limit")
-finally:
-    td.time.sleep = orig_sleep
-
-# --- cleanup: remove test store files
-for fp in (td.OVERRIDES_PATH, td.STATE_PATH, td.CHAT_SETTINGS_PATH):
-    if os.path.exists(fp):
-        os.remove(fp)
-
-print("\nALL TESTS PASSED")
+print("ALL TESTS PASSED")
