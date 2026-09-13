@@ -83,7 +83,7 @@
   "51": {
     "inputs": {
       "pixels": [
-        "50",
+        "53",
         0
       ],
       "vae": [
@@ -175,6 +175,20 @@
     "class_type": "ConditioningZeroOut",
     "_meta": {
       "title": "Обнуление кондиционирования"
+    }
+  },
+  "53": {
+    "inputs": {
+      "image": [
+        "50",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "largest_size": 1280
+    },
+    "class_type": "ImageScaleToMaxDimension",
+    "_meta": {
+      "title": "Уменьшить фото (скорость)"
     }
   }
 }
