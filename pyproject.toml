@@ -2,7 +2,11 @@
 name = "comfyui-controlbot-v2"
 description = "Telegram bot for driving ComfyUI: txt2img/img2img, LoRA, ControlNet, workflow parameters — from chat"
 version = "2.0.0"
+license = {text = "MIT License"}
 dependencies = []
+
+[project.urls]
+Repository = "https://github.com/xylogenw376dq/comfyui-controlbot-v2"
 
 [tool.comfy]
 PublisherId = "xylogenw376dq"
