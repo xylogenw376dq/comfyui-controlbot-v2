@@ -17,7 +17,7 @@ ID (`57:80`), классом (`KSamplerAdvanced`) или частью назва
 | Команда | Описание |
 |---|---|
 | `/workflow` | Текущий и доступные workflow |
-| `/workflow <имя>` | Переключить (txt2img / img2img / свои из config.json) |
+| `/workflow <имя>` | Переключить (txt2img / img2img / video / свои из config.json) |
 
 ## Параметры workflow
 

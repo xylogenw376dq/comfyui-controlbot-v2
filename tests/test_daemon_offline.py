@@ -36,6 +36,10 @@ class FakeAPI:
         SENT.append(("album", chat_id, len(blobs), caption[:40]))
         return True
 
+    def send_video(self, chat_id, video_bytes, caption="", filename="video.mp4"):
+        SENT.append(("video", chat_id, len(video_bytes), caption[:40], filename))
+        return 1
+
     def download_file(self, file_id):
         if file_id == "bad":
             return None, td.MsgError("img_dl_failed", {"reason": "getFile"})
@@ -1117,6 +1121,28 @@ q = POSTED[0]["prompt"]
 assert "__lora" not in q and q["57:80"]["inputs"]["model"] == ["57:11", 0]
 assert q["57:27"]["inputs"]["clip"] == ["57:30", 0]
 print("OK lora off -> clean graph")
+
+# --- video delivery ------------------------------------------------------ #
+
+class VideoHistoryComfy(PostingComfy):
+    """History entry with an .mp4 under the regular images key (SaveVideo format)."""
+    def get(self, path, timeout=10):
+        if path.startswith("/history/"):
+            return {"v1": {"outputs": {"9": {"images": [
+                {"filename": "wan22-video_00001_.mp4", "subfolder": "video", "type": "output"},
+            ]}}}, "status": {"status_str": "success"}}
+        return super().get(path, timeout)
+
+bot2b.set_chat_workflow(CHAT, "img2img")
+bot2b.set_lora_settings(CHAT, alias=None)
+bot2b.set_cnet_settings(CHAT, enabled=False, mask_name=None)
+bot2b.comfy = VideoHistoryComfy()
+SENT.clear()
+bot2b.track_and_deliver(CHAT, "v1", "video test", {})
+vids = [s for s in SENT if s[0] == "video"]
+assert vids and vids[0][4].endswith(".mp4"), SENT
+assert not [s for s in SENT if s[0] == "photo"], SENT
+print("OK video delivery via sendVideo")
 
 # real download_file: retries transient failures, respects 429, reports final status
 class FakeResp:

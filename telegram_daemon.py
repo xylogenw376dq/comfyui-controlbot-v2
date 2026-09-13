@@ -63,6 +63,7 @@ DEFAULT_CONFIG = {
 SEED_PARAMS = ("seed", "noise_seed")
 SEED_MAX = 0xFFFFFFFFFFFFFFFF
 ADMIN_COMMANDS = {"users", "adduser", "deluser"}
+VIDEO_EXTS = {"mp4", "m4v", "mov", "webm", "mkv", "avi"}
 _config_lock = threading.Lock()
 
 log = logging.getLogger("controlbot")
@@ -233,6 +234,15 @@ class TelegramAPI:
         if reply_markup:
             data["reply_markup"] = reply_markup
         return self._request("sendPhoto", data=data, files=files, timeout=(10, 120))
+
+    def send_video(self, chat_id, video_bytes, caption="", filename="video.mp4"):
+        ext = os.path.splitext(filename)[1].lower()
+        mime = "video/webm" if ext == ".webm" else "video/mp4"
+        files = {"video": (filename, video_bytes, mime)}
+        data = {"chat_id": chat_id}
+        if caption:
+            data["caption"] = caption[:1024]
+        return self._request("sendVideo", data=data, files=files, timeout=(10, 300))
 
     def send_album(self, chat_id, images, caption=""):
         """Send 2..10 photos as one album. Returns True on success."""
@@ -1679,13 +1689,17 @@ class ControlBot:
 
         errored = (history_entry.get("status") or {}).get("status_str") == "error"
         images = collect_history_images(history_entry)
-        blobs = []
+        media = []
         for img in images:
             data = self.comfy.fetch_image(img["filename"], img["subfolder"], img["type"])
-            if data:
-                blobs.append(self.maybe_recompress(data))
+            if not data:
+                continue
+            ext = os.path.splitext(img["filename"])[1].lower().lstrip(".") or "png"
+            if ext not in VIDEO_EXTS:
+                data = self.maybe_recompress(data)
+            media.append((data, ext))
 
-        if not blobs:
+        if not media:
             key = "error_no_images" if errored else "no_images"
             self.api.edit_message(chat_id, status_msg_id, self.t(chat_id, key))
             return
@@ -1694,7 +1708,7 @@ class ControlBot:
         if errored:
             self.api.edit_message(
                 chat_id, status_msg_id,
-                self.t(chat_id, "done_error", elapsed=elapsed, count=len(blobs)),
+                self.t(chat_id, "done_error", elapsed=elapsed, count=len(media)),
             )
             caption = (
                 self.t(chat_id, "caption_error", text=prompt_text)
@@ -1703,13 +1717,13 @@ class ControlBot:
         else:
             self.api.edit_message(
                 chat_id, status_msg_id,
-                self.t(chat_id, "done", elapsed=elapsed, count=len(blobs)),
+                self.t(chat_id, "done", elapsed=elapsed, count=len(media)),
             )
             caption = (
                 self.t(chat_id, "caption_ok", text=prompt_text)
                 if prompt_text else self.t(chat_id, "caption_ok_plain")
             )
-        self.deliver_images(chat_id, blobs, caption)
+        self.deliver_media(chat_id, media, caption)
 
         self.state.save({
             "last": {
@@ -1724,27 +1738,41 @@ class ControlBot:
             }
         })
 
-    def deliver_images(self, chat_id, blobs, caption):
+    def deliver_media(self, chat_id, media, caption):
         """1 image -> sendPhoto; 2+ -> albums of 10 with sequential fallback."""
-        if not blobs:
+        if not media:
             return
-        if len(blobs) == 1:
-            if self.api.send_photo(chat_id, blobs[0], caption) is None:
+        if len(media) == 1:
+            blob, ext = media[0]
+            self._send_one(chat_id, blob, ext, caption)
+            return
+        if all(ext not in VIDEO_EXTS for _, ext in media):
+            ok = True
+            for index, chunk in enumerate(chunks([b for b, _ in media], 10)):
+                sent = self.api.send_album(chat_id, chunk, caption if index == 0 else "")
+                if not sent:
+                    ok = False
+                    for j, blob in enumerate(chunk):  # fallback: one by one
+                        first_of_all = index == 0 and j == 0
+                        self.api.send_photo(chat_id, blob, caption if first_of_all else "")
+                        time.sleep(1)
+                time.sleep(1)  # be gentle with rate limits between albums
+            if not ok:
+                self.api.send_message(chat_id, self.t(chat_id, "album_partial_fail"))
+            return
+        for index, (blob, ext) in enumerate(media):  # mixed media: videos go one by one
+            self._send_one(chat_id, blob, ext, caption if index == 0 else "")
+            time.sleep(1)
+
+    def _send_one(self, chat_id, blob, ext, caption):
+        if ext in VIDEO_EXTS:
+            if self.api.send_video(chat_id, blob, caption, filename=f"video.{ext}") is None:
                 time.sleep(2)
-                self.api.send_photo(chat_id, blobs[0], caption)
+                self.api.send_video(chat_id, blob, caption, filename=f"video.{ext}")
             return
-        ok = True
-        for index, chunk in enumerate(chunks(blobs, 10)):
-            sent = self.api.send_album(chat_id, chunk, caption if index == 0 else "")
-            if not sent:
-                ok = False
-                for j, blob in enumerate(chunk):  # fallback: one by one
-                    first_of_all = index == 0 and j == 0
-                    self.api.send_photo(chat_id, blob, caption if first_of_all else "")
-                    time.sleep(1)
-            time.sleep(1)  # be gentle with rate limits between albums
-        if not ok:
-            self.api.send_message(chat_id, self.t(chat_id, "album_partial_fail"))
+        if self.api.send_photo(chat_id, blob, caption) is None:
+            time.sleep(2)
+            self.api.send_photo(chat_id, blob, caption)
 
     @staticmethod
     def maybe_recompress(blob):
@@ -2292,19 +2320,20 @@ class ControlBot:
             fresh = collect_history_images(history.get(last["prompt_id"]))
             if fresh:
                 images = fresh
-        blobs = []
+        media = []
         for img in images[:10]:
             data = self.comfy.fetch_image(img["filename"], img["subfolder"], img["type"])
             if data:
-                blobs.append(self.maybe_recompress(data))
-        if not blobs:
+                ext = os.path.splitext(img["filename"])[1].lower().lstrip(".") or "png"
+                media.append((self.maybe_recompress(data) if ext not in VIDEO_EXTS else data, ext))
+        if not media:
             self.api.send_message(chat_id, self.t(chat_id, "last_unavailable"))
             return
         caption = (
             self.t(chat_id, "caption_ok", text=last.get("prompt_text", ""))
             if last.get("prompt_text") else self.t(chat_id, "last_caption_plain")
         )
-        self.deliver_images(chat_id, blobs, caption)
+        self.deliver_media(chat_id, media, caption)
 
     def cmd_regen(self, chat_id, arg):
         last = (self.state.load().get("last")) or {}

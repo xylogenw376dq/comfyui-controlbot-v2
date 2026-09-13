@@ -1,0 +1,184 @@
+{
+  "9": {
+    "inputs": {
+      "filename_prefix": "wan22-video",
+      "video": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Сохранить видео"
+    }
+  },
+  "90": {
+    "inputs": {
+      "images": [
+        "57",
+        0
+      ],
+      "fps": 24
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Собрать видео"
+    }
+  },
+  "57": {
+    "inputs": {
+      "samples": [
+        "80",
+        0
+      ],
+      "vae": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Декодировать VAE"
+    }
+  },
+  "80": {
+    "inputs": {
+      "seed": [
+        "81",
+        0
+      ],
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "11",
+        0
+      ],
+      "positive": [
+        "27",
+        0
+      ],
+      "negative": [
+        "33",
+        0
+      ],
+      "latent_image": [
+        "54",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (video)"
+    }
+  },
+  "81": {
+    "inputs": {
+      "mode": "random",
+      "seed": 0
+    },
+    "class_type": "AdvancedSeedGenerator",
+    "_meta": {
+      "title": "🎲 Seed Generator"
+    }
+  },
+  "50": {
+    "inputs": {
+      "image": "example.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Первый кадр"
+    }
+  },
+  "54": {
+    "inputs": {
+      "vae": [
+        "29",
+        0
+      ],
+      "width": 1280,
+      "height": 704,
+      "length": 49,
+      "batch_size": 1,
+      "start_image": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "Wan22ImageToVideoLatent",
+    "_meta": {
+      "title": "Фото → видео латент"
+    }
+  },
+  "29": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Загрузить VAE (Wan)"
+    }
+  },
+  "28": {
+    "inputs": {
+      "unet_name": "wan2.2_ti2v_5B_fp16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Загрузить видео-модель"
+    }
+  },
+  "11": {
+    "inputs": {
+      "shift": 8.0,
+      "model": [
+        "28",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "Выборка модели AuraFlow"
+    }
+  },
+  "30": {
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Загрузить CLIP (umt5)"
+    }
+  },
+  "27": {
+    "inputs": {
+      "text": "a cat walking",
+      "clip": [
+        "30",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Кодирование текста (движение)"
+    }
+  },
+  "33": {
+    "inputs": {
+      "conditioning": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Обнуление кондиционирования"
+    }
+  }
+}
