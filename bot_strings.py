@@ -55,6 +55,7 @@ MENU = [
               "en": "🎛 ControlNet: /cnet on|off|mode|strength"}),
     ("lora", {"ru": "🧩 LoRA: /lora list|имя|off", "en": "🧩 LoRA: /lora list|name|off"}),
     ("tips", {"ru": "💡 Подсказки по промптам", "en": "💡 Prompting tips"}),
+    ("vseconds", {"ru": "🎥 Длительность видео: /vseconds 6", "en": "🎥 Video duration: /vseconds 6"}),
     ("workflow", {"ru": "🧩 Сменить workflow: /workflow img2img",
                   "en": "🧩 Switch workflow: /workflow img2img"}),
     ("model", {"ru": "🧠 Сменить модель: /model имя",
@@ -109,6 +110,7 @@ STRINGS = {
             "/cnet — ControlNet для img2img: on|off, mode, strength\n"
             "/lora — LoRA для обоих флоу: list|имя|strength|off\n"
             "/tips — как писать промпты для текущего флоу\n"
+            "/vseconds 6 — длительность видео в секундах\n",
             "/models и /model &lt;имя&gt; — смена модели\n\n"
             "<b>Сервер</b>\n"
             "/status · /queue · /stop · /clearqueue\n\n"
@@ -171,6 +173,13 @@ STRINGS = {
         "cnet_group_admin_only": "⛔ В групповом чате ControlNet меняют только админы.",
         "cnet_unknown": "Не понял подкоманду «{sub}». Команды: /cnet on|off|mode|strength|clear",
         "cnet_video_skip": "ℹ️ ControlNet не применяется к video-workflow — генерирую без него.",
+        "vseconds_status": "🎥 Видео: {seconds} с → {frames} кадров → {segments} сегм. (по ≤81 кадра). Изменить: /vseconds <сек>",
+        "vseconds_set": "🎥 Длительность видео: {seconds} с ({frames} кадров, {segments} сегм. по ≤81 кадра).",
+        "vseconds_bad": "Нужно целое число секунд. Пример: /vseconds 6",
+        "vseconds_range": "Длительность — от 1 до 30 секунд.",
+        "video_segment_progress": "🎥 Видео {seconds}с · сегмент {i}/{n} · {elapsed}с",
+        "video_chain_failed": "⚠️ Сегмент {i}/{n} не сгенерировался: {reason}. Попробуй ещё раз или уменьши /vseconds.",
+        "video_assembling": "🎞 Склеиваю сегменты…",
         "lora_status": "🧩 LoRA: {name} · сила: {strength}\nПрименяется к текущему workflow («{name2}»). Команды: /lora list · /lora <имя> · /lora strength 0.8 · /lora off",
         "lora_none": "нет",
         "lora_usage": "🧩 LoRA: {name} · сила: {strength}\nВыбор: /lora <имя> · список: /lora list · сила: /lora strength 0.8 · выключить: /lora off",
@@ -331,6 +340,7 @@ STRINGS = {
             "/cnet — ControlNet for img2img: on|off, mode, strength\n"
             "/lora — LoRA for both flows: list|name|strength|off\n"
             "/tips — prompting tips for the current workflow\n"
+            "/vseconds 6 — video duration in seconds\n",
             "/models and /model &lt;name&gt; — switch the model\n\n"
             "<b>Server</b>\n"
             "/status · /queue · /stop · /clearqueue\n\n"
@@ -393,6 +403,13 @@ STRINGS = {
         "cnet_group_admin_only": "⛔ In group chats only admins can change ControlNet.",
         "cnet_unknown": "Didn't understand subcommand «{sub}». Commands: /cnet on|off|mode|strength|clear",
         "cnet_video_skip": "ℹ️ ControlNet is not applied to video workflows — generating without it.",
+        "vseconds_status": "🎥 Video: {seconds} s → {frames} frames → {segments} segments (≤81 frames each). Change: /vseconds <sec>",
+        "vseconds_set": "🎥 Video duration: {seconds} s ({frames} frames, {segments} segments of ≤81 frames).",
+        "vseconds_bad": "Expected an integer number of seconds. Example: /vseconds 6",
+        "vseconds_range": "Duration must be between 1 and 30 seconds.",
+        "video_segment_progress": "🎥 Video {seconds}s · segment {i}/{n} · {elapsed}s",
+        "video_chain_failed": "⚠️ Segment {i}/{n} failed: {reason}. Try again or lower /vseconds.",
+        "video_assembling": "🎞 Assembling segments…",
         "lora_status": "🧩 LoRA: {name} · strength: {strength}\nApplies to the current workflow («{name2}»). Commands: /lora list · /lora <name> · /lora strength 0.8 · /lora off",
         "lora_none": "none",
         "lora_usage": "🧩 LoRA: {name} · strength: {strength}\nPick: /lora <name> · list: /lora list · strength: /lora strength 0.8 · disable: /lora off",
