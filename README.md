@@ -71,6 +71,7 @@ supervisor + watchdog перезапускают его при сбоях). Ло
 - [docs/architecture.md](docs/architecture.md) — как всё устроено внутри
 - [docs/changelog.md](docs/changelog.md) — изменения относительно v1
 - [docs/testing.md](docs/testing.md) — офлайн-тесты и e2e-скрипты
+- [docs/publishing.md](docs/publishing.md) — публикация в ComfyUI Registry
 
 ## Credits
 
