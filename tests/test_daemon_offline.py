@@ -1191,6 +1191,17 @@ print("OK video I2V mode (photo kept)")
 # cnet enabled on video workflow -> skipped with a notice, graph untouched
 bot2b.set_cnet_settings(CHAT, enabled=True, mask_name="mask.png", prep="", seconds=2)
 bot2b.set_chat_workflow(CHAT, "video")
+
+# lora selected + video workflow -> skipped with a notice, no injection
+bot2b.set_lora_settings(CHAT, alias="gothic")
+SENT.clear()
+POSTED.clear()
+bot2b.comfy = PostingComfy()
+bot2b.cmd_generate(CHAT, "clouds drifting")
+assert any("LoRA не применяется" in str(s[2]) for s in SENT), SENT
+q = POSTED[0]["prompt"]
+assert "__lora" not in q, "lora must not patch the Wan model"
+print("OK lora skipped on video workflow")
 POSTED.clear()
 SENT.clear()
 bot2b.comfy = PostingComfy()

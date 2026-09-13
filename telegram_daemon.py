@@ -1421,7 +1421,9 @@ class ControlBot:
             self.api.send_message(chat_id, self.t(chat_id, "cnet_group_admin_only"))
             return
         st = self.get_video_settings(chat_id)
-        fps = self.video_fps(self.load_active_workflow(chat_id))
+        wf = self.load_active_workflow(chat_id)
+        self.apply_overrides(wf, self.overrides.load())
+        fps = self.video_fps(wf)
         if not arg.strip():
             plan = plan_video_segments(int(st["seconds"]) * fps)
             self.api.send_message(chat_id, self.t(
@@ -1871,8 +1873,8 @@ class ControlBot:
         latent_id = next(
             (nid for nid, n in base_workflow.items() if n.get("class_type") == "Wan22ImageToVideoLatent"), None
         )
-        if not loader_id or not latent_id:
-            self.api.send_message(chat_id, self.t(chat_id, "lora_need_sampler"))
+        if not latent_id:
+            self.api.send_message(chat_id, self.t(chat_id, "video_chain_failed", i=0, n=len(plan), reason="нет Wan22ImageToVideoLatent"))
             return
         status_msg_id = self.api.send_message(
             chat_id,
@@ -2096,14 +2098,16 @@ class ControlBot:
             for n in workflow.values():
                 n.get("inputs", {}).pop("start_image", None)
 
-        # LoRA patch (both flows) — wired before ControlNet so the chain is
-        # base model → LoRA → ControlNet → sampler
-        if self.get_lora_settings(chat_id).get("alias"):
+        # LoRA patch (image flows only): a Z-Image LoRA is wrong for the Wan video model
+        is_video = self.is_video_workflow(workflow)
+        if self.get_lora_settings(chat_id).get("alias") and not is_video:
             workflow, lora_err = self.inject_lora(workflow, chat_id)
             if lora_err:
                 self.send_err(chat_id, lora_err)
                 return
             log.info("LoRA injected for chat %s", chat_id)
+        elif self.get_lora_settings(chat_id).get("alias") and is_video:
+            self.api.send_message(chat_id, self.t(chat_id, "lora_video_skip"))
 
         # ControlNet patch (image flows only): requires an approved mask
         if self.get_cnet_settings(chat_id).get("enabled"):
@@ -2115,7 +2119,7 @@ class ControlBot:
                     self.send_err(chat_id, cnet_err)
                     return
             # video workflow: split the duration into <=81-frame segments and chain them
-        if self.is_video_workflow(workflow):
+        if is_video:
             vset = self.get_video_settings(chat_id)
             fps = self.video_fps(workflow)
             plan = plan_video_segments(int(vset.get("seconds", 2)) * fps)
