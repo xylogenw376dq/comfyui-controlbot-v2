@@ -13,6 +13,7 @@ workflow, LoRA, ControlNet — без открытия интерфейса.
 ## Возможности
 
 - `/generate` — txt2img и img2img (фото + подпись или reply), прогресс с ETA каждые 5 секунд
+- `/workflow video` — img2video (Wan 2.2 TI2V 5B): фото → mp4-клип
 - `/workflow` — несколько API-workflow с переключением per-chat
 - `/cnet` — ControlNet (Z-Image Fun Union) с одобрением маски через inline-кнопки
 - `/lora` — одна активная LoRA, выбор из списка, сохраняется до сброса

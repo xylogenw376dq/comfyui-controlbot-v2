@@ -12,6 +12,7 @@ LoRA 和 ControlNet，无需打开界面。
 ## 功能
 
 - `/generate` — txt2img 与 img2img（图片加说明文字或回复图片），每 5 秒更新带 ETA 的进度
+- `/workflow video` — img2video（Wan 2.2 TI2V 5B）：图片 → mp4 片段
 - `/workflow` — 多套 API 工作流，按聊天独立切换
 - `/cnet` — ControlNet（Z-Image Fun Union），通过内联按钮确认遮罩
 - `/lora` — 单个激活的 LoRA，从列表选择，保存到重置为止

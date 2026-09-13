@@ -38,6 +38,12 @@
 сам ControlNet работает на нодах ядра (`ModelPatchLoader` + `Apply Z-Image Fun ControlNet`).
 
 **LoRA** — файлы в `ComfyUI/models/loras/`, только под архитектуру Z-Image.
+
+**img2video** (`/workflow video`) — модель `wan2.2_ti2v_5B_fp16.safetensors` (10 ГБ) в
+`diffusion_models/`, энкодер `umt5_xxl_fp8_e4m3fn_scaled.safetensors` (6.7 ГБ) в
+`text_encoders/`, VAE `wan_2.1_vae.safetensors` в `vae/` — всё из
+[Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged).
+На карте с 8 ГБ VRAM клип 1280×704×49 кадров генерируется ~10–20 минут со стримингом весов.
 Имена в боте задаются через `lora_aliases` в config.json.
 
 ## Требования к workflow

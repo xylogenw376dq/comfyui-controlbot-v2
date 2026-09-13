@@ -13,6 +13,7 @@ See [docs/changelog.md](docs/changelog.md) for details.
 ## Features
 
 - `/generate` — txt2img and img2img (photo + caption or reply), progress with ETA every 5 seconds
+- `/workflow video` — img2video (Wan 2.2 TI2V 5B): photo → mp4 clip
 - `/workflow` — multiple API workflows, switched per chat
 - `/cnet` — ControlNet (Z-Image Fun Union) with mask approval via inline buttons
 - `/lora` — single active LoRA, picked from a list, persisted until reset
