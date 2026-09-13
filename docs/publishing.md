@@ -25,4 +25,4 @@ Action срабатывает на пуш тегов и на ручной зап
    и страница паблишера на registry.comfy.org.
 
 После публикации плагин устанавливается из ComfyUI-Manager (Custom Nodes Manager)
-по имени `comfyui-controlbot` (паблишер `xylogenw376dq`).
+по имени `comfyui-controlbot-v2` (паблишер `xylogenw376dq`).
