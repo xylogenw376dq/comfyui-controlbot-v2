@@ -1951,6 +1951,25 @@ class ControlBot:
             pass
         self.api.send_message(chat_id, self.t(chat_id, "workflow_set", name=name) + hint)
 
+    def cmd_tips(self, chat_id, arg):
+        """Prompting guide for the chat's active workflow."""
+        workflow = self.load_active_workflow(chat_id)
+        classes = [n.get("class_type", "") for n in workflow.values()]
+        if any("Wan" in c for c in classes):
+            key = "prompting_video"
+        elif any(
+            "z_image" in str(n.get("inputs", {}).get("unet_name", "")).lower()
+            for n in workflow.values()
+            if n.get("class_type") == "UNETLoader"
+        ):
+            key = "prompting_zimage"
+        else:
+            key = "prompting_generic"
+        self.api.send_message(
+            chat_id,
+            self.t(chat_id, key) + "\n\n" + self.t(chat_id, "tips_usage"),
+        )
+
     def cmd_prompt(self, chat_id, arg):
         if not arg.strip():
             self.api.send_message(chat_id, self.t(chat_id, "usage_prompt"))

@@ -1182,6 +1182,18 @@ assert any("не применяется к video" in str(s[2]) for s in SENT), S
 bot2b.set_cnet_settings(CHAT, enabled=False)
 print("OK cnet skipped on video workflow")
 
+# --- prompting tips per workflow ----------------------------------------- #
+
+bot2b.set_chat_workflow(CHAT, "txt2img")
+SENT.clear()
+bot2b.cmd_tips(CHAT, "")
+assert "Z-Image Turbo" in SENT[-1][2], SENT[-1][2]
+bot2b.set_chat_workflow(CHAT, "video")
+SENT.clear()
+bot2b.cmd_tips(CHAT, "")
+assert "Wan 2.2 TI2V 5B" in SENT[-1][2] and "ДВИЖЕНИЕ" in SENT[-1][2], SENT[-1][2]
+print("OK /tips per workflow")
+
 # real download_file: retries transient failures, respects 429, reports final status
 class FakeResp:
     def __init__(self, status, body=b""):

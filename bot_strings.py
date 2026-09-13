@@ -54,6 +54,7 @@ MENU = [
     ("cnet", {"ru": "🎛 ControlNet: /cnet on|off|mode|strength",
               "en": "🎛 ControlNet: /cnet on|off|mode|strength"}),
     ("lora", {"ru": "🧩 LoRA: /lora list|имя|off", "en": "🧩 LoRA: /lora list|name|off"}),
+    ("tips", {"ru": "💡 Подсказки по промптам", "en": "💡 Prompting tips"}),
     ("workflow", {"ru": "🧩 Сменить workflow: /workflow img2img",
                   "en": "🧩 Switch workflow: /workflow img2img"}),
     ("model", {"ru": "🧠 Сменить модель: /model имя",
@@ -107,6 +108,7 @@ STRINGS = {
             "/denoise 0.65 — сила изменения в img2img\n"
             "/cnet — ControlNet для img2img: on|off, mode, strength\n"
             "/lora — LoRA для обоих флоу: list|имя|strength|off\n"
+            "/tips — как писать промпты для текущего флоу\n"
             "/models и /model &lt;имя&gt; — смена модели\n\n"
             "<b>Сервер</b>\n"
             "/status · /queue · /stop · /clearqueue\n\n"
@@ -177,7 +179,11 @@ STRINGS = {
         "lora_unknown": "LoRA «{name}» не найдена. Доступные: {list}",
         "lora_strength_set": "🎚 Сила LoRA: {value}",
         "lora_strength_bad": "Нужно число, например: /lora strength 0.8",
-        "lora_file_missing": "⚠️ Файл LoRA «{file}» отсутствует в models/loras/ — скачай его и попробуй снова.",
+                "prompting_zimage": "🖼 Промпты для Z-Image Turbo (txt2img / img2img):\n\nПиши естественными предложениями — модель обучена на описаниях кадров, а не на тегах. Английский и китайский понимает одинаково хорошо.\n\nСтруктура: объект и действие → окружение → свет → стиль/ракурс.\nПример: «a candid photo of a woman reading a book in a sunlit cafe, warm tones, shallow depth of field»\n\nДля img2img описывай целевой результат целиком, а не изменение («киберпанк-неон», а не «сделать неон»).\n\nНе нужны: теги через запятую в стиле SD1.5, «masterpiece, best quality», длинные негативы — негатив в этом флоу игнорируется.\n\nLoRA: у большинства есть свои триггер-слова — смотри страницу модели на Civitai.",
+        "prompting_video": "🎬 Промпты для Wan 2.2 TI2V 5B (video):\n\nОписывай ДВИЖЕНИЕ, а не картинку: что происходит, как движется камера. Одна сцена, непрерывное действие, 1–2 предложения.\n\nСловарь камеры: camera slowly zooms in · static shot · handheld · pan left · close-up.\nДвижение объекта: clouds drift across the sky · hair sways in the wind · water splashes.\n\nС фото (I2V): описывай, что происходит С кадром, — не пересказывай его содержимое.\nБез фото (T2V): опиши сцену целиком.\n\nПримеры:\nI2V: «clouds drift slowly, mist rolls over the hills, camera slowly zooms out»\nT2V: «a hummingbird hovers over a red flower in slow motion, macro shot, soft morning light»\n\nИзбегай: нескольких сцен подряд, склеек, абстракций без визуального образа («эпично» без конкретики).",
+        "prompting_generic": "🖼 Промпты: пиши естественными предложениями — объект → действие → окружение → свет → стиль.",
+        "tips_usage": "Подсказка показана для активного workflow. Смени его: /workflow <имя>",
+"lora_file_missing": "⚠️ Файл LoRA «{file}» отсутствует в models/loras/ — скачай его и попробуй снова.",
         "lora_need_sampler": "⚠️ Не смог встроить LoRA в этот workflow.",
         "img_dl_failed": "⚠️ Не удалось скачать изображение из Telegram ({reason}). Попробуй ещё раз — подробности в логах сервера.",
         "img_too_large": "⚠️ Файл больше 20 МБ — Telegram не отдаёт такие файлы ботам. Пришли картинку обычным (сжатым) фото.",
@@ -324,6 +330,7 @@ STRINGS = {
             "/denoise 0.65 — img2img change strength\n"
             "/cnet — ControlNet for img2img: on|off, mode, strength\n"
             "/lora — LoRA for both flows: list|name|strength|off\n"
+            "/tips — prompting tips for the current workflow\n"
             "/models and /model &lt;name&gt; — switch the model\n\n"
             "<b>Server</b>\n"
             "/status · /queue · /stop · /clearqueue\n\n"
@@ -394,7 +401,11 @@ STRINGS = {
         "lora_unknown": "LoRA «{name}» not found. Available: {list}",
         "lora_strength_set": "🎚 LoRA strength: {value}",
         "lora_strength_bad": "Expected a number, e.g.: /lora strength 0.8",
-        "lora_file_missing": "⚠️ LoRA file «{file}» is missing from models/loras/ — download it and try again.",
+                "prompting_zimage": "🖼 Prompts for Z-Image Turbo (txt2img / img2img):\n\nWrite natural sentences — the model was trained on captions, not tags. It understands English and Chinese equally well.\n\nStructure: subject and action → environment → light → style/angle.\nExample: «a candid photo of a woman reading a book in a sunlit cafe, warm tones, shallow depth of field»\n\nFor img2img describe the target result in full, not the change («cyberpunk neon», not «make it neon»).\n\nSkip: SD1.5-style comma tags, «masterpiece, best quality», long negatives — the negative is ignored in this workflow.\n\nLoRA: most have their own trigger words — check the model page on Civitai.",
+        "prompting_video": "🎬 Prompts for Wan 2.2 TI2V 5B (video):\n\nDescribe MOTION, not a picture: what happens, how the camera moves. One scene, continuous action, 1–2 sentences.\n\nCamera vocabulary: camera slowly zooms in · static shot · handheld · pan left · close-up.\nObject motion: clouds drift across the sky · hair sways in the wind · water splashes.\n\nWith a photo (I2V): describe what happens WITH the frame — don't re-describe it.\nWithout a photo (T2V): describe the whole scene.\n\nExamples:\nI2V: «clouds drift slowly, mist rolls over the hills, camera slowly zooms out»\nT2V: «a hummingbird hovers over a red flower in slow motion, macro shot, soft morning light»\n\nAvoid: multiple scenes in a row, cuts, abstractions without a visual image («epic» without specifics).",
+        "prompting_generic": "🖼 Prompts: write natural sentences — subject → action → environment → light → style.",
+        "tips_usage": "The tip is shown for the active workflow. Switch it with /workflow <name>",
+"lora_file_missing": "⚠️ LoRA file «{file}» is missing from models/loras/ — download it and try again.",
         "lora_need_sampler": "⚠️ Couldn't wire LoRA into this workflow.",
         "img_dl_failed": "⚠️ Failed to download the image from Telegram ({reason}). Try again — details are in the server logs.",
         "img_too_large": "⚠️ The file is over 20 MB — Telegram won't deliver it to bots. Send it as a regular (compressed) photo.",
