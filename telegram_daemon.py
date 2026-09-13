@@ -1358,11 +1358,15 @@ class ControlBot:
             log.error("Callback handling failed:\n%s", traceback.format_exc())
             answer()
 
-    def load_workflow_safe(self):
+    def load_workflow_safe(self, chat_id=None):
         try:
-            return self.load_workflow()
+            return self.load_workflow(self.get_chat_workflow(chat_id))
         except FileNotFoundError:
             return {}
+
+    def load_active_workflow(self, chat_id):
+        """The chat's currently selected workflow (for chat-facing commands)."""
+        return self.load_workflow(self.get_chat_workflow(chat_id))
 
     def apply_overrides(self, workflow, overrides):
         """Mutate a workflow copy with persisted overrides. Returns applied prompt text."""
@@ -1895,7 +1899,14 @@ class ControlBot:
             return
         self.set_chat_workflow(chat_id, name)
         log.info("Workflow for chat %s set to %s", chat_id, name)
-        self.api.send_message(chat_id, self.t(chat_id, "workflow_set", name=name))
+        hint = ""
+        try:
+            fresh = self.load_workflow(name)
+            if any("denoise" in n.get("inputs", {}) for n in fresh.values()):
+                hint = "\n" + self.t(chat_id, "workflow_denoise_hint")
+        except FileNotFoundError:
+            pass
+        self.api.send_message(chat_id, self.t(chat_id, "workflow_set", name=name) + hint)
 
     def cmd_prompt(self, chat_id, arg):
         if not arg.strip():
@@ -1906,7 +1917,7 @@ class ControlBot:
 
     def cmd_nodes(self, chat_id, arg):
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return
@@ -1920,7 +1931,7 @@ class ControlBot:
 
     def cmd_params(self, chat_id, arg):
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return
@@ -1977,7 +1988,7 @@ class ControlBot:
             return
         target_token, value_text = parts
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return
@@ -2038,7 +2049,7 @@ class ControlBot:
             self.api.send_message(chat_id, self.t(chat_id, "usage_shortcut", cmd=cmd))
             return
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return
@@ -2057,7 +2068,16 @@ class ControlBot:
         self._shortcut(chat_id, "height", arg, "height")
 
     def cmd_batch(self, chat_id, arg):
-        self._shortcut(chat_id, "batch_size", arg, "batch")
+        # txt2img: batch_size on the empty latent; img2img: amount on RepeatLatentBatch
+        if not arg.strip():
+            self.api.send_message(chat_id, self.t(chat_id, "usage_shortcut", cmd="batch"))
+            return
+        workflow = self.load_active_workflow(chat_id)
+        for param in ("batch_size", "amount"):
+            if self.nodes_with_param(workflow, param):
+                self.set_override(chat_id, workflow, None, param, arg)
+                return
+        self.api.send_message(chat_id, self.t(chat_id, "param_not_found_anywhere", param="batch"))
 
     def cmd_sampler(self, chat_id, arg):
         self._shortcut(chat_id, "sampler_name", arg, "sampler")
@@ -2089,7 +2109,7 @@ class ControlBot:
                 return
 
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return
@@ -2142,7 +2162,7 @@ class ControlBot:
     def cmd_model(self, chat_id, arg):
         name = arg.strip()
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return
@@ -2164,7 +2184,7 @@ class ControlBot:
 
     def cmd_models(self, chat_id, arg):
         try:
-            workflow = self.load_workflow()
+            workflow = self.load_active_workflow(chat_id)
         except FileNotFoundError as e:
             self.api.send_message(chat_id, self.t(chat_id, "workflow_missing", path=e))
             return

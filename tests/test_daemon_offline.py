@@ -1029,6 +1029,25 @@ assert not POSTED
 bot2b.set_cnet_settings(CHAT, enabled=False, prep="")
 print("OK unknown preprocessor rejected")
 
+# --- img2img: batch and denoise ----------------------------------------- #
+
+bot2b.set_chat_workflow(CHAT, "img2img")
+SENT.clear()
+bot2b.cmd_batch(CHAT, "2")
+ov = bot2b.overrides.load()
+assert ov["nodes"]["52"]["amount"] == 2, ov  # RepeatLatentBatch amount
+SENT.clear()
+bot2b.cmd_denoise(CHAT, "0.8")
+ov = bot2b.overrides.load()
+assert ov["nodes"]["80"]["denoise"] == 0.8, ov
+POSTED.clear()
+bot2b.comfy = PostingComfy()
+bot2b.cmd_generate(CHAT, "cyberpunk", {"file_id": "good", "ext": "jpg"})
+q = POSTED[0]["prompt"]
+assert q["52"]["inputs"]["amount"] == 2 and q["80"]["inputs"]["denoise"] == 0.8, (q["52"], q["80"])
+assert q["80"]["inputs"]["latent_image"] == ["52", 0]
+print("OK img2img batch + denoise")
+
 # --- LoRA ---------------------------------------------------------------- #
 
 bot2b.set_chat_workflow(CHAT, "txt2img")

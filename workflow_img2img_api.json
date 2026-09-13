@@ -52,7 +52,7 @@
         0
       ],
       "latent_image": [
-        "51",
+        "52",
         0
       ]
     },
@@ -94,6 +94,19 @@
     "class_type": "VAEEncode",
     "_meta": {
       "title": "Кодировать VAE (img2img)"
+    }
+  },
+  "52": {
+    "inputs": {
+      "samples": [
+        "51",
+        0
+      ],
+      "amount": 1
+    },
+    "class_type": "RepeatLatentBatch",
+    "_meta": {
+      "title": "Батч (/batch)"
     }
   },
   "29": {

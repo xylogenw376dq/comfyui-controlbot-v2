@@ -31,7 +31,7 @@ ID (`57:80`), классом (`KSamplerAdvanced`) или частью назва
 | `/settings` | Все переопределения |
 | `/reset` | Сбросить все переопределения |
 
-Шорткаты: `/steps 8`, `/cfg 1`, `/width 1024`, `/height 1720`, `/batch 4`,
+Шорткаты: `/steps 8`, `/cfg 1`, `/width 1024`, `/height 1720`, `/batch 4` (в img2img — размножает исходное фото),
 `/sampler res_multistep`, `/scheduler simple`, `/denoise 0.65`.
 
 Значения валидируются: числа проверяются на диапазон и конечность, combo-списки —
