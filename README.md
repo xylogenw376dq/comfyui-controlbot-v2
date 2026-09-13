@@ -3,6 +3,8 @@
 Телеграм-бот, который управляет ComfyUI с телефона: генерация картинок, настройка параметров
 workflow, LoRA, ControlNet — без открытия интерфейса.
 
+Другие языки: [English](README.en.md) · [中文](README.zh-CN.md)
+
 Это переработанная **вторая версия** плагина
 [AbhishekJha3511/comfyui-controlbot](https://github.com/AbhishekJha3511/comfyui-controlbot):
 от v1 здесь осталась только идея «бот присылает картинку», код переписан полностью.
@@ -19,6 +21,22 @@ workflow, LoRA, ControlNet — без открытия интерфейса.
 - `/adduser`, `/deluser` — управление доступом (админы задаются в конфиге)
 - `/lang` — локализация ru/en per-chat
 - Меню команд, альбомы при мульти-генерации, автоперезапуск с watchdog'ем
+
+## Стандартные модели
+
+Приложенные workflows рассчитаны на **Z-Image Turbo** и работают из коробки со следующими моделями
+(папки — внутри `ComfyUI/models/`, в ComfyUI Desktop это `ComfyUI-Shared/models/`):
+
+| Компонент | Файл | Куда положить | Откуда |
+|---|---|---|---|
+| Диффузионная модель | `z_image_turbo_bf16.safetensors` (12.3 ГБ) | `diffusion_models/` | [HuggingFace](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors) |
+| Текстовый энкодер | `qwen_3_4b.safetensors` (8 ГБ) | `text_encoders/` | [HuggingFace](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors) |
+| VAE | `ae.safetensors` (0.34 ГБ) | `vae/` | [HuggingFace](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors) |
+| Seed-нода (custom node) | ComfyUI-RandomSeedGenerator | `custom_nodes/` | [GitHub](https://github.com/Limbicnation/ComfyUI-RandomSeedGenerator) |
+| ControlNet *(опционально)* | `Z-Image-Turbo-Fun-Controlnet-Union-2.1.safetensors` (~6.7 ГБ) | `model_patches/` | [HuggingFace](https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union-2.1.safetensors) + пак [comfyui_controlnet_aux](https://github.com/Fannovel16/comfyui_controlnet_aux) для режимов |
+| LoRA-пример *(опционально)* | `aesthetic_exp1.safetensors` | `loras/` | [Civitai](https://civitai.com/models/689192/aesthetic-amateur-photo?modelVersionId=2558476) |
+
+ControlNet и LoRA — необязательные расширения, остальное нужно для работы приложенных workflows.
 
 ## Установка
 
