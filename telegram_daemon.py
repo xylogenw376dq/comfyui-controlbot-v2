@@ -878,6 +878,13 @@ class ControlBot:
             return {"file_id": doc["file_id"], "ext": ext}
         return None
 
+    @staticmethod
+    def is_video_workflow(workflow):
+        return any(
+            "Video" in n.get("class_type", "")
+            for n in workflow.values()
+        )
+
     def find_image_ref(self, msg):
         """Image from the message itself, or from the message it replies to."""
         return self.extract_image_ref(msg) or self.extract_image_ref(msg.get("reply_to_message"))
@@ -1869,11 +1876,16 @@ class ControlBot:
             self.api.send_message(
                 chat_id, self.t(chat_id, "img_unused", name=workflow_name)
             )
-        elif img_node and not image_ref:
+        elif img_node and not image_ref and not self.is_video_workflow(workflow):
             self.api.send_message(
                 chat_id, self.t(chat_id, "img_need", name=workflow_name)
             )
             return
+        if self.is_video_workflow(workflow) and img_node and not image_ref:
+            # TI2V text-only mode: no start image -> drop the wire, latent stays pure noise
+            workflow.pop(img_node, None)
+            for n in workflow.values():
+                n.get("inputs", {}).pop("start_image", None)
 
         # LoRA patch (both flows) — wired before ControlNet so the chain is
         # base model → LoRA → ControlNet → sampler
@@ -1884,13 +1896,16 @@ class ControlBot:
                 return
             log.info("LoRA injected for chat %s", chat_id)
 
-        # ControlNet patch (both flows): requires an approved mask
+        # ControlNet patch (image flows only): requires an approved mask
         if self.get_cnet_settings(chat_id).get("enabled"):
-            workflow, cnet_err = self.inject_controlnet(workflow, chat_id)
-            if cnet_err:
-                self.send_err(chat_id, cnet_err)
-                return
-            log.info("ControlNet injected for chat %s", chat_id)
+            if self.is_video_workflow(workflow):
+                self.api.send_message(chat_id, self.t(chat_id, "cnet_video_skip"))
+            else:
+                workflow, cnet_err = self.inject_controlnet(workflow, chat_id)
+                if cnet_err:
+                    self.send_err(chat_id, cnet_err)
+                    return
+                log.info("ControlNet injected for chat %s", chat_id)
 
         prompt_id, client_id, err = self.queue_workflow(chat_id, workflow)
         if err:

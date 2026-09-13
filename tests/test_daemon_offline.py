@@ -115,6 +115,7 @@ class FakeComfy:
 config = dict(td.DEFAULT_CONFIG)
 config.update({
     "telegram_token": "TEST", "allowed_users": [1], "admins": [1],
+    "workflows": {"txt2img": "workflow_api.json", "img2img": "workflow_img2img_api.json", "video": "workflow_img2video_api.json"},
     "lora_aliases": {
         "amateur": "aesthetic_exp1.safetensors",
         "gothic": "MoriimeZ.safetensors",
@@ -1143,6 +1144,43 @@ vids = [s for s in SENT if s[0] == "video"]
 assert vids and vids[0][4].endswith(".mp4"), SENT
 assert not [s for s in SENT if s[0] == "photo"], SENT
 print("OK video delivery via sendVideo")
+
+# --- video workflow: TI2V text-only mode and cnet guard ------------------ #
+
+bot2b.set_chat_workflow(CHAT, "video")
+bot2b.comfy = PostingComfy()
+
+# text-only /generate on the video workflow: no img_need, start_image dropped
+SENT.clear()
+POSTED.clear()
+bot2b.cmd_generate(CHAT, "a cabin in the mountains, clouds drifting")
+assert len(POSTED) == 1, POSTED
+q = POSTED[0]["prompt"]
+assert "50" not in q, "LoadImage should be dropped in T2V mode"
+lv = next(n for n in q.values() if n.get("class_type") == "Wan22ImageToVideoLatent")
+assert "start_image" not in lv["inputs"], lv
+assert q["27"]["inputs"]["text"] == "a cabin in the mountains, clouds drifting"
+print("OK video T2V mode (text-only)")
+
+# with a photo -> I2V mode keeps start_image wired
+POSTED.clear()
+bot2b.cmd_generate(CHAT, "clouds drifting", {"file_id": "good", "ext": "jpg"})
+q = POSTED[0]["prompt"]
+lv = next(n for n in q.values() if n.get("class_type") == "Wan22ImageToVideoLatent")
+assert "start_image" in lv["inputs"], lv
+print("OK video I2V mode (photo kept)")
+
+# cnet enabled on video workflow -> skipped with a notice, graph untouched
+bot2b.set_cnet_settings(CHAT, enabled=True, mask_name="mask.png", prep="")
+POSTED.clear()
+SENT.clear()
+bot2b.comfy = PostingComfy()
+bot2b.cmd_generate(CHAT, "clouds drifting")
+q = POSTED[0]["prompt"]
+assert "__cnet_apply" not in q, "cnet must not patch the Wan model"
+assert any("не применяется к video" in str(s[2]) for s in SENT), SENT
+bot2b.set_cnet_settings(CHAT, enabled=False)
+print("OK cnet skipped on video workflow")
 
 # real download_file: retries transient failures, respects 429, reports final status
 class FakeResp:
