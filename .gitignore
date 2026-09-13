@@ -1,0 +1,18 @@
+# secrets and runtime state — never commit
+config.json
+overrides.json
+state.json
+chat_settings.json
+bot.log*
+
+# python
+__pycache__/
+*.pyc
+
+# local downloads and partial files
+downloaded_workflow/
+*.part
+*.crdownload
+cb_test_*.json
+repro_store.json
+bot_config.json

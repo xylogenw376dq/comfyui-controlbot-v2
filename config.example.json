@@ -1,0 +1,15 @@
+{
+    "telegram_token": "123456789:AAF3yourbottokenfromBotFather",
+    "allowed_users": [123456789],
+    "admins": [123456789],
+    "comfy_host": "127.0.0.1:8188",
+    "workflows": {
+        "txt2img": "workflow_api.json",
+        "img2img": "workflow_img2img_api.json"
+    },
+    "default_workflow": "txt2img",
+    "default_language": "ru",
+    "lora_aliases": {
+        "my-style": "my_style_lora.safetensors"
+    }
+}
