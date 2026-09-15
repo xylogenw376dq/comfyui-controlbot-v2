@@ -1422,8 +1422,10 @@ class ControlBot:
             return
         self.set_lora_settings(chat_id, alias=match_alias)
         log.info("LoRA for chat %s set to %s", chat_id, match_alias)
+        triggers = (self.config.get("lora_triggers") or {}).get(match_alias, "")
+        hint = self.t(chat_id, "lora_triggers", words=triggers) if triggers else ""
         self.api.send_message(
-            chat_id, self.t(chat_id, "lora_set", name=match_alias, strength=st["strength"])
+            chat_id, self.t(chat_id, "lora_set", name=match_alias, strength=st["strength"], triggers=hint)
         )
 
     def cmd_vseconds(self, chat_id, arg, chat_type="private", user_id=None):
