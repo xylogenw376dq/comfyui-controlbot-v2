@@ -462,6 +462,16 @@ def resolve_target(workflow, key):
     return None, MsgError("node_not_found", {"key": key})
 
 
+def execution_had_oom(history_entry):
+    """True if the execution failed with an out-of-memory error."""
+    for m in (history_entry or {}).get("status", {}).get("messages", []):
+        if m[0] == "execution_error":
+            blob = json.dumps(m[1], ensure_ascii=False)
+            if "OutOfMemoryError" in blob or "out of memory" in blob.lower():
+                return True
+    return False
+
+
 def collect_history_images(history_entry):
     """All output images of one history entry, deduplicated, outputs before previews."""
     seen, out = set(), []
@@ -1509,7 +1519,7 @@ class ControlBot:
         """Mutate a workflow copy with persisted overrides. Returns applied prompt text."""
         for nid, params in (overrides.get("nodes") or {}).items():
             if nid not in workflow:
-                log.warning("Override skipped, node %s is gone from workflow", nid)
+                log.info("Override for node %s skipped — not in the active workflow", nid)
                 continue
             for param, value in params.items():
                 if value == "random" and param in SEED_PARAMS:
@@ -1827,8 +1837,16 @@ class ControlBot:
             media.append((data, ext))
 
         if not media:
-            key = "error_no_images" if errored else "no_images"
-            self.api.edit_message(chat_id, status_msg_id, self.t(chat_id, key))
+            if errored:
+                msg = self.t(chat_id, "error_no_images")
+                if execution_had_oom(history_entry):
+                    msg += " " + self.t(chat_id, "oom_hint")
+                self.api.edit_message(chat_id, status_msg_id, msg)
+            else:
+                self.api.edit_message(
+                    chat_id, status_msg_id,
+                    self.t(chat_id, "no_images"),
+                )
             return
 
         elapsed = int(time.time() - started)
@@ -2596,6 +2614,14 @@ class ControlBot:
             self.api.send_message(chat_id, self.t(chat_id, "interrupt_fail"))
         else:
             self.api.send_message(chat_id, self.t(chat_id, "clear_ok"))
+
+    def cmd_free(self, chat_id, arg):
+        """Unload all models from VRAM (POST /free with unload_all)."""
+        result = self.comfy.post("/free", {"unload_all": True}, timeout=30)
+        if result is None:
+            self.api.send_message(chat_id, self.t(chat_id, "interrupt_fail"))
+        else:
+            self.api.send_message(chat_id, self.t(chat_id, "free_done"))
 
     def cmd_last(self, chat_id, arg):
         last = (self.state.load().get("last")) or {}
